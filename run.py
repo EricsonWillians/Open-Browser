@@ -27,6 +27,11 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4 import QtWebKit
 
+class CQLineEdit(QtGui.QLineEdit):
+	
+	def mousePressEvent(self, e):
+		self.selectAll()
+
 class App(QtGui.QApplication):
 	
 	def __init__(self):
@@ -68,7 +73,7 @@ class App(QtGui.QApplication):
 		self.url_label = QtGui.QLabel(self.window)
 		self.url_label.setText("URL: ")
 		self.grid.addWidget(self.url_label, 0, 2)
-		self.url_field = QtGui.QLineEdit(self.window)
+		self.url_field = CQLineEdit(self.window)
 		self.url_field.insert("http://")
 		self.grid.addWidget(self.url_field, 0, 3)
 		self.go_button = QtGui.QPushButton(self.window)
