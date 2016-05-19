@@ -1,5 +1,5 @@
 # PySim
-The simplest browser ever.
+The simplest web browser ever.
 * No history.
 * No favorites.
 * No settings.
