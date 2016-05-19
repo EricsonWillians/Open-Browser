@@ -2,6 +2,8 @@
 The simplest browser ever.
 * No history.
 * No favorites.
+* No settings.
+* No government surveillance.
 * No nothing.
 * SPEED!
  
