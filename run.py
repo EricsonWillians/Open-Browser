@@ -27,13 +27,6 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4 import QtWebKit
 
-class CQWebView(QtWebKit.QWebView):
-	def keyPressEvent(self, event):
-		if event.key() == QtCore.Qt.Key_Backspace:
-			self.emit(QtCore.SIGNAL("GO_BACK"))
-		else:
-			event.ignore()
-
 class App(QtGui.QApplication):
 	
 	def __init__(self):
@@ -83,9 +76,8 @@ class App(QtGui.QApplication):
 		self.go_button.clicked.connect(self.load_page)
 		self.grid.addWidget(self.go_button, 0, 4)
 		self.url_field.returnPressed.connect(self.go_button.click)
-		self.web = CQWebView()
+		self.web = QtWebKit.QWebView()
 		self.web.connect(self.web, QtCore.SIGNAL("linkClicked(const QUrl&)"), self.update_link)
-		self.web.connect(self.web, QtCore.SIGNAL("GO_BACK"), self.go_back)
 		self.web.load(QtCore.QUrl("http://www.google.com"))
 		self.web.page().setLinkDelegationPolicy(QtWebKit.QWebPage.DelegateAllLinks)
 		self.grid.addWidget(self.web, 1, 0, 1, 5)
