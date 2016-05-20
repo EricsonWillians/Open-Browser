@@ -57,9 +57,6 @@ class App(QtGui.QApplication):
 		self.tab_stack.addTab(self.tabs[1][0], '+')
 		self.current_links = []
 		self.create_widgets()
-		self.tab_stack.currentChanged.connect(
-			lambda: self.tab_stack.setTabText(self.tab_stack.currentIndex(), self.current_links[self.tab_stack.currentIndex()])
-		)
 		QtWebKit.QWebSettings.globalSettings().setAttribute(QtWebKit.QWebSettings.PluginsEnabled, True)
 		self.visited = []
 		self.current_index = 0
