@@ -173,7 +173,7 @@ class App(QtGui.QApplication):
 		self.tabs[index][2].show()
 		
 	def load_page(self):
-		self.visited.append((lambda s: s if "http" in s else "https://" + s)(self.url_field.text()))
+		self.visited.append((lambda s: s if "http" in s else (lambda x: x if ' ' not in x and '.' in x else "https://www.google.com/search?q=" + s)("https://" + s))(self.url_field.text()))
 		self.tabs[self.tab_stack.currentIndex()][2].load(QtCore.QUrl(self.visited[-1]))
 		self.current_index = len(self.visited)-1
 		self.current_links[self.tab_stack.currentIndex()] = self.url_field.text()
