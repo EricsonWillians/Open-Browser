@@ -126,7 +126,6 @@ class App(QtGui.QApplication):
 			self.tabs.pop(self.tab_stack.currentIndex())
 			self.current_links.pop(self.tab_stack.currentIndex())
 			self.tab_stack.addTab(self.tabs[-1][0], '+')
-			self.tab_stack.setTabText(self.tab_stack.currentIndex(), self.current_links[self.tab_stack.currentIndex()])
 			self.url_field.setText(self.current_links[self.tab_stack.currentIndex()])
 		
 	def compose_tab(self, index):
@@ -137,7 +136,14 @@ class App(QtGui.QApplication):
 		self.tabs[index][2].load(QtCore.QUrl("http://www.google.com"))
 		self.url_field.setText("http://www.google.com")
 		self.tabs[index][2].page().setLinkDelegationPolicy(QtWebKit.QWebPage.DelegateAllLinks)
-		self.tab_stack.setTabText(index, self.url_field.text())
+		self.tabs[self.tab_stack.currentIndex()][2].loadProgress.connect(lambda: self.tab_stack.setTabText(
+			self.tab_stack.currentIndex(), 
+			"Loading..."
+		))
+		self.tabs[self.tab_stack.currentIndex()][2].loadFinished.connect(lambda: self.tab_stack.setTabText(
+			self.tab_stack.currentIndex(), 
+			self.tabs[self.tab_stack.currentIndex()][2].page().mainFrame().findFirstElement("title").toPlainText()
+		))
 		self.current_links.insert(index, self.url_field.text())
 		self.tabs[index][2].show()
 		
@@ -145,7 +151,6 @@ class App(QtGui.QApplication):
 		self.visited.append((lambda s: s if "http://" in s else "http://" + s)(self.url_field.text()))
 		self.tabs[self.tab_stack.currentIndex()][2].load(QtCore.QUrl(self.visited[-1]))
 		self.current_index = len(self.visited)-1
-		self.tab_stack.setTabText(self.tab_stack.currentIndex(), self.url_field.text())
 		self.current_links[self.tab_stack.currentIndex()] = self.url_field.text()
 	
 	def update_link(self, url):
