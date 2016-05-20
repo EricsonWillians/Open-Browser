@@ -156,7 +156,6 @@ class App(QtGui.QApplication):
 	def update_link(self, url):
 		self.url_field.setText(url.toString())
 		self.current_links[self.tab_stack.currentIndex()] = url.toString()
-		self.tab_stack.setTabText(self.tab_stack.currentIndex(), url.toString()[:20] + "...")
 		self.tabs[self.tab_stack.currentIndex()][2].load(url)
 		
 if __name__ == '__main__':
