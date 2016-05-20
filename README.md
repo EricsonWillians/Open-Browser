@@ -10,7 +10,7 @@ The simplest web browser ever.
 
 ###### Enjoy the absence of lags (And also of everything).
 
-![PySim](http://s32.postimg.org/x99pw8vnp/Py_Sim.png "")
+![Open Browser](http://s32.postimg.org/i12rpkkw5/Open_Browser.png "")
 
 
 ### Dependency
