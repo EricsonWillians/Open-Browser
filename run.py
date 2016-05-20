@@ -38,6 +38,20 @@ class CQTabWidget(QtGui.QTabWidget):
 		if type(event) == QtGui.QKeyEvent:
 			if event.key() == QtCore.Qt.Key_F5:
 				self.emit(QtCore.SIGNAL("RELOAD_PAGE"))
+			elif event.key() == QtCore.Qt.Key_Control:
+				self.control_key = True
+	
+	def keyReleaseEvent(self, event):
+		if type(event) == QtGui.QKeyEvent:
+			if self.control_key == True:
+				if event.key() == QtCore.Qt.Key_T:
+					self.emit(QtCore.SIGNAL("ADD_TAB"))
+				elif event.key() == QtCore.Qt.Key_Tab:
+					self.emit(QtCore.SIGNAL("CHANGE_TAB"))
+				elif event.key() == QtCore.Qt.Key_F4:
+					self.emit(QtCore.SIGNAL("REMOVE_TAB"))
+			if event.key() == QtCore.Qt.Key_Control:
+				self.control_key = False
 
 class App(QtGui.QApplication):
 	
@@ -105,14 +119,25 @@ class App(QtGui.QApplication):
 		self.compose_tab(0)
 		self.back_button.clicked.connect(lambda: self.tabs[self.tab_stack.currentIndex()][2].back())
 		self.forward_button.clicked.connect(lambda: self.tabs[self.tab_stack.currentIndex()][2].forward())
+		self.tab_stack.connect(self.tab_stack, QtCore.SIGNAL("ADD_TAB"), lambda: self.add_tab(len(self.tabs)-1))
+		self.tab_stack.connect(self.tab_stack, QtCore.SIGNAL("CHANGE_TAB"), lambda: self.change_tab())
+		self.tab_stack.connect(self.tab_stack, QtCore.SIGNAL("REMOVE_TAB"), lambda: self.remove_tab())
 	
 	def add_tab(self, i):
 		if i == len(self.tabs)-1:
-			self.tabs.insert(len(self.tabs)-1, [QtGui.QWidget(), QtGui.QGridLayout()])
-			self.tab_stack.addTab(self.tabs[-2][0], self.url_field.text())
+			self.tabs.insert(i, [QtGui.QWidget(), QtGui.QGridLayout()])
+			self.tab_stack.addTab(self.tabs[-2][0], "New tab")
+			self.tab_stack.setCurrentIndex(len(self.tabs)-2)
 			self.compose_tab(len(self.tabs)-2)
 			self.tab_stack.addTab(self.tabs[-1][0], '+')
 			
+	def change_tab(self):
+		if len(self.tabs) > 2:
+			if self.tab_stack.currentIndex() == len(self.tabs)-2:
+				self.tab_stack.setCurrentIndex(0)
+			else:
+				self.tab_stack.setCurrentIndex(self.tab_stack.currentIndex()+1)
+		
 	def remove_tab(self):
 		if len(self.tabs) > 2:
 			self.tab_stack.removeTab(self.tab_stack.currentIndex())
@@ -137,10 +162,13 @@ class App(QtGui.QApplication):
 			self.tab_stack.currentIndex(), 
 			"Loading..."
 		))
-		self.tabs[self.tab_stack.currentIndex()][2].loadFinished.connect(lambda: self.tab_stack.setTabText(
-			self.tab_stack.currentIndex(), 
-			self.tabs[self.tab_stack.currentIndex()][2].page().mainFrame().findFirstElement("title").toPlainText()
-		))
+		try:
+			self.tabs[self.tab_stack.currentIndex()][2].loadFinished.connect(lambda: self.tab_stack.setTabText(
+				self.tab_stack.currentIndex(), 
+				self.tabs[self.tab_stack.currentIndex()][2].page().mainFrame().findFirstElement("title").toPlainText()
+			))
+		except NameError as e:
+			pass
 		self.current_links.insert(index, self.url_field.text())
 		self.tabs[index][2].show()
 		
