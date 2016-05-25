@@ -1,7 +1,7 @@
 # Open Browser
 The simplest web browser ever.
 
-![Open Browser](http://s32.postimg.org/gxnul8w5h/Open_Browser.png "")
+![Open Browser](http://s33.postimg.org/ph83y12ov/openbrowser.png "")
 ### Dependency
 * sudo apt-get install python-qt4
 * sudo apt-get install git
