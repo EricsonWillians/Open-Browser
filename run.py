@@ -23,9 +23,51 @@
 #  
 
 import sys
-from PyQt4 import QtCore
-from PyQt4 import QtGui
-from PyQt4 import QtWebKit
+import json
+import os
+from PyQt4 import QtCore, QtTest, QtGui, QtWebKit
+
+class Serializable:
+	
+	def __init__(self):
+		self._file = None
+		
+	def serialize(self, path, mode, data):	
+		try:
+			with open(path, mode) as outfile:
+				self._file = outfile
+				self._file.write(json.dumps(data))
+		except:
+			raise FileNotFoundError()
+
+class Bookmarks(Serializable):
+
+	def __init__(self):
+		Serializable.__init__(self)
+		if os.path.isfile("bookmarks.json"):
+			self.data = self.load("bookmarks.json")
+		else:
+			self.data = {}
+		
+	def __setitem__(self, key, value):
+		self.data[key] = value
+		
+	def __getitem__(self, key):
+		return self.data[key]
+		
+	def __iter__(self):
+		for bookmark in self.data:
+			yield bookmark
+		
+	def get_data(self):
+		return self.data
+	
+	def write(self, path):
+		self.serialize(path, 'w', self.get_data())
+	
+	def load(self, path):
+		with open(path, 'r') as _file:
+			return json.load(_file)
 
 class CQLineEdit(QtGui.QLineEdit):
 	
@@ -42,16 +84,33 @@ class CQTabWidget(QtGui.QTabWidget):
 				self.control_key = True
 	
 	def keyReleaseEvent(self, event):
-		if type(event) == QtGui.QKeyEvent:
-			if self.control_key == True:
-				if event.key() == QtCore.Qt.Key_T:
-					self.emit(QtCore.SIGNAL("ADD_TAB"))
-				elif event.key() == QtCore.Qt.Key_Tab:
-					self.emit(QtCore.SIGNAL("CHANGE_TAB"))
-				elif event.key() == QtCore.Qt.Key_F4:
-					self.emit(QtCore.SIGNAL("REMOVE_TAB"))
-			if event.key() == QtCore.Qt.Key_Control:
-				self.control_key = False
+		try:
+			if type(event) == QtGui.QKeyEvent:
+				if self.control_key == True:
+					if event.key() == QtCore.Qt.Key_T:
+						self.emit(QtCore.SIGNAL("ADD_TAB"))
+					elif event.key() == QtCore.Qt.Key_Tab:
+						self.emit(QtCore.SIGNAL("CHANGE_TAB"))
+					elif event.key() == QtCore.Qt.Key_F4:
+						self.emit(QtCore.SIGNAL("REMOVE_TAB"))
+				if event.key() == QtCore.Qt.Key_Control:
+					self.control_key = False
+		except AttributeError as e:
+			pass
+
+class CQWebView(QtWebKit.QWebView): 
+
+	def __init__(self):
+		QtWebKit.QWebView.__init__(self)
+		self.installEventFilter(self)
+
+	def eventFilter(self, obj, event):
+		if obj == self:
+			if event.type() == QtCore.QEvent.MouseButtonPress:
+				if event.button() == QtCore.Qt.LeftButton:
+					QtTest.QTest.mouseClick(self, QtCore.Qt.MiddleButton, QtCore.Qt.NoModifier, event.pos())
+					return True
+		return False
 
 class App(QtGui.QApplication):
 	
@@ -70,9 +129,11 @@ class App(QtGui.QApplication):
 		self.tab_stack.addTab(self.tabs[0][0], '')
 		self.tab_stack.addTab(self.tabs[1][0], '+')
 		self.current_links = []
-		self.create_widgets()
-		QtWebKit.QWebSettings.globalSettings().setAttribute(QtWebKit.QWebSettings.PluginsEnabled, True)
 		self.visited = []
+		self.bookmarks = Bookmarks()
+		QtWebKit.QWebSettings.globalSettings().setAttribute(QtWebKit.QWebSettings.PluginsEnabled, True)
+		QtWebKit.QWebSettings.globalSettings().setAttribute(QtWebKit.QWebSettings.JavascriptEnabled, True)
+		self.create_widgets()
 		self.current_index = 0
 		self.window.showMaximized()
 		sys.exit(self.exec_())
@@ -103,10 +164,27 @@ class App(QtGui.QApplication):
 		self.url_field = CQLineEdit(self.window)
 		self.url_field.insert("http://")
 		self.grid.addWidget(self.url_field, 0, 5)
+		self.star_button = QtGui.QPushButton(self.window)
+		self.star_button.setIcon(QtGui.QIcon(QtGui.QPixmap("GFX/star.png")))
+		self.star_button.clicked.connect(self.bookmark)
+		self.grid.addWidget(self.star_button, 0, 7)
 		self.go_button = QtGui.QPushButton(self.window)
 		self.go_button.setIcon(QtGui.QIcon(QtGui.QPixmap("GFX/go.png")))
 		self.go_button.clicked.connect(self.load_page)
-		self.grid.addWidget(self.go_button, 0, 6)
+		self.grid.addWidget(self.go_button, 0, 8)
+		self.bookmarks_window = QtGui.QWidget()
+		self.bookmarks_grid = QtGui.QGridLayout()
+		self.bookmarks_window.setLayout(self.bookmarks_grid)
+		self.bookmarks_window.setWindowTitle("Bookmarks")
+		self.bookmarks_window.setFixedSize(400, 600)
+		self.bookmarks_window.setWindowIcon(QtGui.QIcon(QtGui.QPixmap("GFX/fav.png")))
+		self.bookmarks_list = QtGui.QListWidget()
+		self.bookmarks_list.itemClicked.connect(lambda x: self.update_link(self.bookmarks[x.text()]))
+		self.bookmarks_grid.addWidget(self.bookmarks_list)
+		self.bookmarks_button = QtGui.QPushButton(self.window)
+		self.bookmarks_button.setIcon(QtGui.QIcon(QtGui.QPixmap("GFX/fav.png")))
+		self.bookmarks_button.clicked.connect(lambda: [self.bookmarks_window.show(), self.center_window(self.bookmarks_window), self.bookmarks_window.activateWindow()])
+		self.grid.addWidget(self.bookmarks_button, 0, 9)
 		self.del_button = QtGui.QToolButton(self.tab_stack)
 		self.del_button.setText('x')
 		self.del_font = self.del_button.font()
@@ -115,13 +193,23 @@ class App(QtGui.QApplication):
 		self.tab_stack.setCornerWidget(self.del_button)
 		self.del_button.clicked.connect(self.remove_tab)
 		self.url_field.returnPressed.connect(self.go_button.click)
-		self.grid.addWidget(self.tab_stack, 2, 0, 1, 7)
+		self.grid.addWidget(self.tab_stack, 2, 0, 1, 10)
 		self.compose_tab(0)
-		self.back_button.clicked.connect(lambda: self.tabs[self.tab_stack.currentIndex()][2].back())
-		self.forward_button.clicked.connect(lambda: self.tabs[self.tab_stack.currentIndex()][2].forward())
+		self.back_button.clicked.connect(self.go_back)
+		self.forward_button.clicked.connect(self.go_forward)
 		self.tab_stack.connect(self.tab_stack, QtCore.SIGNAL("ADD_TAB"), lambda: self.add_tab(len(self.tabs)-1))
 		self.tab_stack.connect(self.tab_stack, QtCore.SIGNAL("CHANGE_TAB"), lambda: self.change_tab())
 		self.tab_stack.connect(self.tab_stack, QtCore.SIGNAL("REMOVE_TAB"), lambda: self.remove_tab())
+		for x in self.bookmarks.get_data():
+			self.bookmarks_list.addItem(x)
+	
+	def go_back(self):
+		self.tabs[self.tab_stack.currentIndex()][2].back()
+		# url update do be implemented...
+	
+	def go_forward(self):
+		self.tabs[self.tab_stack.currentIndex()][2].forward()
+		# url update do be implemented...
 	
 	def add_tab(self, i):
 		if i == len(self.tabs)-1:
@@ -151,25 +239,30 @@ class App(QtGui.QApplication):
 			self.url_field.setText(self.current_links[self.tab_stack.currentIndex()])
 		
 	def compose_tab(self, index):
-		self.tabs[index].append(QtWebKit.QWebView())
+		self.tabs[index].append(CQWebView())
 		self.tabs[index][0].setLayout(self.tabs[index][1])
 		self.tabs[index][1].addWidget(self.tabs[index][2])
-		self.tabs[index][2].connect(self.tabs[index][2], QtCore.SIGNAL("linkClicked(const QUrl&)"), self.update_link)
-		self.tabs[index][2].load(QtCore.QUrl("http://www.google.com"))
-		self.url_field.setText("http://www.google.com")
 		self.tabs[index][2].page().setLinkDelegationPolicy(QtWebKit.QWebPage.DelegateAllLinks)
-		self.tabs[self.tab_stack.currentIndex()][2].loadProgress.connect(lambda: self.tab_stack.setTabText(
-			self.tab_stack.currentIndex(), 
-			"Loading..."
-		))
+		self.tabs[index][2].connect(self.tabs[index][2], QtCore.SIGNAL("linkClicked(const QUrl&)"), self.update_link)
+		# To be implemented somehow... {
+		self.tabs[index][2].connect(self.tabs[index][2], QtCore.SIGNAL("OPEN_IN_NEW_TAB"), lambda: [
+			self.add_tab(len(self.tabs)-1),
+			None
+		])
+		# }
+		self.current_links.insert(index, self.url_field.text())
+		self.update_link(QtCore.QUrl("http://www.google.com"))
 		try:
+			self.tabs[self.tab_stack.currentIndex()][2].loadProgress.connect(lambda: [self.tab_stack.setTabText(
+				self.tab_stack.currentIndex(), 
+				"Loading..."
+			), (lambda x: self.star_button.setIcon(QtGui.QIcon(QtGui.QPixmap("GFX/star.png"))) if x not in self.bookmarks else self.star_button.setIcon(QtGui.QIcon(QtGui.QPixmap("GFX/removestar.png"))))(self.tabs[self.tab_stack.currentIndex()][2].page().mainFrame().findFirstElement("title").toPlainText())])
 			self.tabs[self.tab_stack.currentIndex()][2].loadFinished.connect(lambda: self.tab_stack.setTabText(
 				self.tab_stack.currentIndex(), 
 				self.tabs[self.tab_stack.currentIndex()][2].page().mainFrame().findFirstElement("title").toPlainText()
 			))
-		except NameError as e:
+		except AttributeError as e:
 			pass
-		self.current_links.insert(index, self.url_field.text())
 		self.tabs[index][2].show()
 		
 	def load_page(self):
@@ -179,9 +272,34 @@ class App(QtGui.QApplication):
 		self.current_links[self.tab_stack.currentIndex()] = self.url_field.text()
 	
 	def update_link(self, url):
-		self.url_field.setText(url.toString())
-		self.current_links[self.tab_stack.currentIndex()] = url.toString()
-		self.tabs[self.tab_stack.currentIndex()][2].load(url)
+		if type(url) == QtCore.QUrl:
+			self.url_field.setText(url.toString())
+			self.current_links[self.tab_stack.currentIndex()] = url.toString()
+			self.tabs[self.tab_stack.currentIndex()][2].load(url)
+		elif type(url) == str:
+			self.url_field.setText(url)
+			self.current_links[self.tab_stack.currentIndex()] = url
+			self.tabs[self.tab_stack.currentIndex()][2].load(QtCore.QUrl(url))
+		page_title = self.tabs[self.tab_stack.currentIndex()][2].page().mainFrame().findFirstElement("title").toPlainText()
 		
+	def bookmark(self):
+		page_title = self.tabs[self.tab_stack.currentIndex()][2].page().mainFrame().findFirstElement("title").toPlainText()
+		if page_title not in self.bookmarks:
+			self.star_button.setIcon(QtGui.QIcon(QtGui.QPixmap("GFX/removestar.png")))
+			self.bookmarks[page_title] = self.current_links[self.tab_stack.currentIndex()]
+			self.bookmarks_list.addItem(page_title)
+		else:
+			self.star_button.setIcon(QtGui.QIcon(QtGui.QPixmap("GFX/star.png")))
+			self.bookmarks.data.pop(page_title, None)
+			self.bookmarks_list.takeItem(self.bookmarks_list.row(self.bookmarks_list.findItems(page_title, QtCore.Qt.MatchExactly)[0]))
+		self.bookmarks.write("bookmarks.json")
+	
+	def center_window(self, w):
+		frame_geometry = w.frameGeometry()
+		screen = self.desktop().screenNumber(self.desktop().cursor().pos())
+		center_point = self.desktop().screenGeometry(screen).center()
+		frame_geometry.moveCenter(center_point)
+		w.move(frame_geometry.topLeft())
+	
 if __name__ == '__main__':
    app = App()
