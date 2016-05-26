@@ -7,11 +7,11 @@ A web browser designed to be open, minimal and fast.
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. 
+These instructions will get you a copy of the project up and running on your local machine. 
 
 ### Prerequisities
 
-To `Open-Browser` is build on `Python-Qt4`.
+`Open-Browser` depends on `Python-Qt4` and `Python 3.x`.
 
 ```bash
 sudo apt-get install python-qt4
@@ -25,7 +25,7 @@ To use `Open-Browser`, make a clone of this repository.
 git clone https://github.com/EricsonWillians/Open-Browser
 cd Open-Browser
 ```
-Add run permission to script
+Add run permission to the script if you're on Linux.
 
 ```
 sudo chmod +x run.py
