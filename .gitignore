@@ -205,3 +205,15 @@ fabric.properties
 
 .idea/
 bookmarks.json
+config.ini
+
+# Modern Python project
+*.lock
+poetry.lock
+Pipfile.lock
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# Open Browser data
+.open_browser/
